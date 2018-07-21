@@ -1,0 +1,16 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<odoo>
+    <data>
+        <record model="ir.ui.view" id="view_invoice_form_inherit_taxes_show">
+            <field name="name">account.invoice.view.inherit.tax_show</field>
+            <field name="model">account.invoice</field>
+            <field name="inherit_id" ref="account.invoice_form"/>
+            <field name="arch" type="xml">
+                <xpath expr="//form/sheet/notebook/page[1]/field[1]/tree/field[@name='price_subtotal']" position="after">
+                    <field name="price_tax"/>
+                    <field name="total_with_tax"/>
+                </xpath>
+            </field>
+         </record>
+      </data>
+</odoo>
