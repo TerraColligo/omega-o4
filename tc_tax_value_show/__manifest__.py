@@ -2,7 +2,7 @@
 
 {
     'name': 'Show Taxes value',
-    'version': '1.0',
+    'version': '2018.07.22.02.57',
     'author' : 'Terra Colligo',
     'category': 'Extra',
     'summary':  '',
