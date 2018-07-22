@@ -22,6 +22,6 @@ class AccountInvoiceLine(models.Model):
             self.total_with_tax = taxes['total_included']
 
     price_tax = fields.Monetary(string='Impuestos', compute='_compute_price', help="Taxes amount")
-    total_with_tax = fields.Monetary(string='Total con impuestos', compute='_compute_price', help="Total With Taxes")
+    total_with_tax = fields.Monetary(string='Total con impuestos.', compute='_compute_price', help="Total With Taxes")
     
 # vim:expandtab:smartindent:tabstop=4:softtabstop=4:shiftwidth=4:
