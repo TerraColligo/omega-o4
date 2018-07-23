@@ -16,4 +16,9 @@
             </td>
         </xpath>
     </template>
+    <template id="tc_tax_value_show_report_invoice_document_mx" inherit_id="l10n_mx_edi.report_invoice_document_mx">
+        <xpath expr="//t[@t-if='o.l10n_mx_edi_cfdi_uuid']/div" position="attributes">
+            <attribute name="class">hidden</attribute>
+        </xpath>
+    </template>
 </odoo>
