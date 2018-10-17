@@ -6,7 +6,7 @@
     'sequence': 1,
     
     'description': """
-        Export and Import Purchase Order using Xls File. 
+        Export and Import Purchase Order using Xls File.
     """,    
     'category': 'Purchase',
     'images' : [],

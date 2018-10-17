@@ -1,10 +1,17 @@
 import xlrd
 from odoo import fields, models, api,_
 import base64
-from odoo.exceptions import Warning,ValidationError
+from odoo.exceptions import Warning, ValidationError
+from odoo.exceptions import UserError
 from datetime import datetime
 import sys
 import logging
+from io import  BytesIO
+try:
+    import  xlwt
+    from    xlwt import Borders
+except ImportError:
+    xlwt = None
 
 _logger=logging.getLogger(__name__)
 
@@ -82,7 +89,7 @@ class ImportPurchaseOrder(models.TransientModel):
         return data
     
     @api.multi
-    def create_mismatch_log(self, msg="Import Sale Order", to_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")):
+    def create_mismatch_log(self, msg="Import Purchase Order", to_date = datetime.now().strftime("%Y-%m-%d %H:%M:%S")):
         log_obj=self.env['import.orders.mismatch.log']
         log_id=log_obj.create({'log_date':to_date,'message':msg,'type':'import'})
         return log_id
@@ -100,6 +107,8 @@ class ImportPurchaseOrder(models.TransientModel):
         purchase_obj = self.env['purchase.order']
         product_obj = self.env['product.product']
         row_number = 1
+        po_name = ''
+        purchase_list = []
         for data in purchase_data:
             external_id = data.get('External Id')
             invalid_data = []
@@ -114,10 +123,16 @@ class ImportPurchaseOrder(models.TransientModel):
                 msg = "Please Enter the Product name of row number %s"%(row_number)
                 invalid_data.append(msg)
             
+            if  barcode == '' :
+                barcode =''
+            elif  type(barcode) == float:
+                barcode = ("%s"%(int(barcode))).strip() if barcode else ''
+            else:
+                barcode = str(barcode).strip()
+
             product_name = product_name.strip()
-            barcode = ("%s"%(int(barcode))).strip() if barcode else ''
-            product_id = product_obj.search([('name','=',product_name)],limit=1)
-            # product_id = product_obj.search([('name','=',product_name),('barcode','=',barcode)],limit=1)
+            product_id = product_obj.search([('name','=',product_name),('barcode','=',barcode)],limit=1)
+            #product_id = product_obj.search([('name','=',product_name)],limit=1)            
             if not product_id:
                 msg = 'Product not found  Related Barcode number %s and Product name %s !! Row Number : %s '%(barcode,product_name,row_number)
                 invalid_data.append(msg)
@@ -130,8 +145,18 @@ class ImportPurchaseOrder(models.TransientModel):
             partner = partner.strip()
             partner_obj = self.env['res.partner'].search([('name','=',partner)],limit=1)
             if not partner_obj:
-                msg = 'not found related Partner name %s of Row Number : %s '%(partner,row_number)
-                invalid_data.append(msg)
+                length=len(partner)
+                if length > 5:
+                    partner = partner[0:5]
+                elif length <= 3:
+                    partner = partner[0:2]
+                elif length > 7:
+                    partner = partner[0:5]
+                partner_obj = self.env['res.partner'].search([('name','ilike',partner)],limit=1)
+                if not partner_obj:
+                    msg = 'not found related Partner name %s of Row Number : %s '%(partner,row_number)
+                    invalid_data.append(msg)
+
                 
             company = data.get('Company Name','')
             if  not company:
@@ -152,18 +177,25 @@ class ImportPurchaseOrder(models.TransientModel):
                 
             uom = uom.strip()
             product_uom_obj = self.env['product.uom'].search([('name','=',uom)],limit=1)
+            if product_uom_obj and product_id:
+                if product_uom_obj.name != product_id.uom_id.name:
+                    msg = 'Does not match Product Uom %s of Row Number : %s '%(uom,row_number)
+                    invalid_data.append(msg)
             if not product_uom_obj:
                 msg = 'not found related Unit Of Measure %s of Row Number : %s '%(uom,row_number)
                 invalid_data.append(msg)
             
             description = data.get('Order Lines/Description','')
             tax_ids = self.env.ref('tc_po_export_import.tasa_16_percent').ids
-            if len(invalid_data) == 0:
-                po_name = external_id[23:]
-                purchase_order_id = self.env['purchase.order'].search([('name','=',po_name)])
+            if len(invalid_data) == 0:       
+                po_name = external_id
+                purchase_order_id = self.env['purchase.order'].search([('external_id','=',po_name),('processed','=',True)])                
                 if not purchase_order_id:
+                    if len(purchase_list) > 0:
+                        message = "no se pueden importar Rfq múltiple en el archivo. \n Multiple Rfq in the File unable to import"           
+                        raise UserError(_(message))
+                        
                     order_vals = {
-                            'name':po_name,
                             'partner_id':partner_obj.id,
                             'company_id':company_obj.id,
                             'currency_id':company_obj.currency_id.id,
@@ -177,8 +209,11 @@ class ImportPurchaseOrder(models.TransientModel):
                         'user_id':self.env.user.id,
                         'state':'draft',
                         'currency_id':company_obj.currency_id.id,
+                        'external_id':po_name,
+                        'processed':True
                         })
                     purchase_order_id = self.env['purchase.order'].create(order_vals)
+                    purchase_list.append(purchase_order_id.id)
                 purchase_order_line = self.env['purchase.order.line'] 
                 order_line = {
                     'order_id':purchase_order_id.id,
@@ -201,7 +236,9 @@ class ImportPurchaseOrder(models.TransientModel):
             else:
                 for error_msg in invalid_data:
                     self.create_mismatch_log_line(error_msg, self.mismatch_log_id)
-
+        
+        po_obj = self.env['purchase.order'].browse(purchase_list)
+        po_obj.write({'processed':False})
     
     def validate_process(self):
         '''
