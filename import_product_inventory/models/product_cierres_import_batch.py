@@ -5,8 +5,10 @@ import logging
 from psycopg2 import IntegrityError
 from odoo.tools.safe_eval import safe_eval
 _logger = logging.getLogger(__name__)
-class ProductImportBatch(models.Model):
-    _name = 'product.import.batch'
+
+
+class ProductCierresImportBatch(models.Model):
+    _name = 'product.cierres.import.batch'
     _order = 'create_date desc'
     _inherit = ['mail.thread', 'mail.activity.mixin', 'portal.mixin']
 
@@ -31,7 +33,7 @@ class ProductImportBatch(models.Model):
         #To manange savepoiunt, we used ids instead of direct browsable record.
         ids = self.ids
         cr = self._cr
-        product_columns = ['id','categ_id/name','name','barcode','default_code','unit_of_measurement','uom_po_id','l10n_mx_edi_code_sat_id','supplier_taxes_id','taxes_id','type','route_ids/id','purchase_ok','sale_ok','standard_price','lst_price','seller_ids/name/name']
+        product_columns = ['id','categ_id/name','name','barcode','default_code','unit_of_measurement','type','route_ids/id','purchase_ok','sale_ok','standard_price','lst_price','seller_ids/name/name']
         category_mapping_dict = {}
         uom_mapping_dict = {}
         po_uom_mapping_dict = {}
@@ -58,10 +60,6 @@ class ProductImportBatch(models.Model):
                     category_name = product.get('categ_id/name')
                     uom_name = product.get('unit_of_measurement')
                     uom_po_name = product.get('uom_po_id')
-                    sat_id = product.get('l10n_mx_edi_code_sat_id')
-                    supplier_taxes = product.get('supplier_taxes_id')
-                    customer_taxes = product.get('taxes_id')
-                    #category_code = product.get('Cat Code')
                     default_code = product.get('default_code')
                     product_name = product.get('name')
                     product_type = product.get('type')
@@ -99,55 +97,6 @@ class ProductImportBatch(models.Model):
                             route_id = route_mapping_dict.get(route_ext_id)
                             if route_id:
                                 route_ids.append(route_id)
-                    if sat_id:
-                        sat_code = sat_id.strip()
-                        if len(sat_code) == 7:
-                            sat_code = '0' + str(sat_code)
-                        elif len(sat_code) == 6:
-                            sat_code = '00' + str(sat_code)
-                        elif len(sat_code) == 5:
-                            sat_code = '000' + str(sat_code)
-                        elif len(sat_code) == 4:
-                            sat_code = '0000' + str(sat_code)
-                        sat_rec_id = self.env['l10n_mx_edi.product.sat.code'].search([('code', '=', sat_code)], limit=1).id
-                        # sat_ext_id = sat_id.strip()
-                        # if sat_ext_id not in sat_mapping_dict:
-                        #     sat_record = self.env.ref(sat_ext_id,False)
-                        #     if sat_record and sat_record._name=='l10n_mx_edi.product.sat.code':
-                        #         sat_mapping_dict.update({sat_ext_id:sat_record.id})
-                        #     else:
-                        #         sat_mapping_dict.update({sat_ext_id:False})
-                        # sat_rec_id = sat_mapping_dict.get(sat_ext_id)
-                    supplier_tax_ids = []
-                    if supplier_taxes:
-                        for supplier_tax_ext_id in supplier_taxes.split(','):
-                            supplier_tax_ext_id = supplier_tax_ext_id.strip()
-                            supplier_tax_ids = self.env['account.tax'].search([('type_tax_use', '=', 'sale'), ('name', '=', supplier_tax_ext_id)])
-                            supplier_tax_ids = supplier_tax_ids.ids
-                            # if supplier_tax_ext_id not in supplier_tax_mapping_dict:
-                            #     supplier_tax_record = self.env.ref(supplier_tax_ext_id,False)
-                            #     if supplier_tax_record and supplier_tax_record._name=='account.tax':
-                            #         supplier_tax_mapping_dict.update({supplier_tax_ext_id:supplier_tax_record.id})
-                            #     else:
-                            #         supplier_tax_mapping_dict.update({supplier_tax_ext_id:False})
-                            # supplier_tax_id = supplier_tax_mapping_dict.get(supplier_tax_ext_id)
-                            # if supplier_tax_id:
-                            #     supplier_tax_ids.append(supplier_tax_id)
-                    customer_tax_ids = []
-                    if customer_taxes:
-                        for customer_tax_ext_id in customer_taxes.split(','):
-                            customer_tax_ext_id = customer_tax_ext_id.strip()
-                            customer_tax_ids = self.env['account.tax'].search([('type_tax_use', '=', 'purchase'), ('name', '=', customer_tax_ext_id)])
-                            customer_tax_ids = customer_tax_ids.ids
-                            # if customer_tax_ext_id not in customer_tax_mapping_dict:
-                            #     customer_tax_record = self.env.ref(customer_tax_ext_id,False)
-                            #     if customer_tax_record and customer_tax_record._name=='account.tax':
-                            #         customer_tax_mapping_dict.update({customer_tax_ext_id:customer_tax_record.id})
-                            #     else:
-                            #         customer_tax_mapping_dict.update({customer_tax_ext_id:False})
-                            # customer_tax_id = customer_tax_mapping_dict.get(customer_tax_ext_id)
-                            # if customer_tax_id:
-                            #     customer_tax_ids.append(customer_tax_id)
                     sellers = product.get('seller_ids/name/name')
                     seller_ids = []
                     if sellers:
@@ -183,18 +132,10 @@ class ProductImportBatch(models.Model):
                         }
                     if route_ids:
                         product_vals.update({'route_ids' : [(6,0,route_ids)]})
-                    if sat_rec_id:
-                        product_vals.update({'l10n_mx_edi_code_sat_id' : sat_rec_id})
-                    if supplier_tax_ids:
-                        product_vals.update({'supplier_taxes_id' : [(6,0,supplier_tax_ids)]})
-                    if customer_tax_ids:
-                        product_vals.update({'taxes_id' : [(6,0,customer_tax_ids)]})
                     if seller_ids:
                         product_vals.update({'seller_ids' : seller_ids})
                     if uom_id:
                         product_vals.update({'uom_id' : uom_id,'uom_po_id':uom_id})
-                    if po_uom_id:
-                        product_vals.update({'uom_po_id' : po_uom_id})
                     product_exist=False
                     if external_id:
                         product_exist = self.env.ref(external_id,False)
@@ -232,7 +173,6 @@ class ProductImportBatch(models.Model):
                         if location_id and type(product_qty) in [float,int] and product_qty>=0: #and product_qty not in [None,False,'']
                             if location_id not in inventory_line_vals:
                                 inventory_line_vals.update({location_id:''})
-
                             #For faster create inventory.
                             cr.execute("select sum(quantity) from stock_quant where company_id=%d and location_id=%d and product_id=%d"%(company_id, location_id,product_exist.id))
                             theoretical_qty = cr.fetchone()
@@ -265,6 +205,7 @@ class ProductImportBatch(models.Model):
                 batch.write({'state':'failed'})
                 batch.message_post(body=str(e))
         return True
+
     @api.model
     def create_inventory(self, inventory_line_vals, location_id_inventory_dict):
         inventory_obj = self.env['stock.inventory']
@@ -283,8 +224,8 @@ class ProductImportBatch(models.Model):
             inventory_rec.action_check()
             inventory_rec.write({'state': 'done'})
             inventory_rec.post_inventory()
-
         return True
+
     @api.model
     def get_create_xml_id(self,record, external_id):
         """ Return a valid xml_id for the record ``self``. """

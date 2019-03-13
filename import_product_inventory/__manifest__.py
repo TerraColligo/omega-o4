@@ -1,10 +1,10 @@
 # -*- coding: utf-8 -*-
 
 {'name': 'Import product in Batch',
- 'version': '11.0.1.0.0',
+ 'version': '11.0.2.0.0',
  'category': 'other',
  'depends': ['l10n_mx','l10n_mx_edi','sale_stock','purchase'],
- 'author': "Nikunj Antala",
+ 'author': "TerraColligo",
  'license': 'AGPL-3',
  'website': '',
  'data': [
@@ -12,7 +12,9 @@
         'security/security.xml',
         'data/cron.xml',
         'views/product_import_batch_view.xml',
+        'views/product_cierries_import_batch_view.xml',
         'wizard/import_product_wizard_view.xml',
+        'wizard/import_cierres_product_wizard_view.xml',
         'wizard/export_product_view.xml',
         ],
   "qweb": [
