@@ -1,11 +1,9 @@
-# -*- coding: utf-8 -*-
-
 {'name': 'Import product in Batch',
- 'version': '11.0.2.0.0',
+ 'version': '11.3.21.6.2019',
  'category': 'other',
- 'depends': ['l10n_mx','l10n_mx_edi','sale_stock','purchase'],
- 'author': "TerraColligo",
- 'license': 'AGPL-3',
+ 'depends': ['l10n_mx','l10n_mx_edi','sale_stock','purchase','point_of_sale'],
+ 'author': "Terra Colligo",
+ 'license': 'OPL-1',
  'website': '',
  'data': [
         'security/ir.model.access.csv',
